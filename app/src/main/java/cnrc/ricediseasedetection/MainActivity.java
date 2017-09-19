@@ -22,8 +22,13 @@ import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -43,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     ImageView imgView_original;
     String fileName = null;
     String mCurrentPhotoPath = null;
+    private int leafMatPixCount;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
@@ -78,8 +85,14 @@ public class MainActivity extends AppCompatActivity {
                 {
                     Log.i(TAG, "Here at BaseLoader Call back");
                     //perform calculations here.
-                    //Mat leafMat =
-                            rtnLeafMat(mCurrentPhotoPath);
+                    Mat leafMat = rtnLeafMat(debugFilePath);
+                    //test:
+                    if(leafMat != null){
+                        //Perform operations on this fucking leafMat:
+
+                    }else{
+                        Log.e(TAG,"Leaf mat is Null (empty).");
+                    }
                 } break;
                 default:
                 {
@@ -88,31 +101,57 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         //Debug: To return Mat object
-        private void rtnLeafMat(String mCurrentPhotoPath) {
-            Mat originalMat = Imgcodecs.imread(mCurrentPhotoPath);
-            Log.i(TAG, "Current Photo Path:" + mCurrentPhotoPath);
-            if(isMatEmpty(originalMat)){
+        private Mat rtnLeafMat(String thisFilePath) {
+            Mat originalMat = Imgcodecs.imread(thisFilePath);
+            Mat grayScaleMat = Imgcodecs.imread(thisFilePath, Imgcodecs.IMREAD_GRAYSCALE);
+            Log.i(TAG, "Current Photo Path:" + thisFilePath);
+            if(isMatEmpty(grayScaleMat)){
                 Log.e(TAG, "Empty originalMat");
             }else{
                 //Log.i(TAG, "Original Mat:" + originalMat.total());
-                Bitmap testBmp = Bitmap.createBitmap(originalMat.cols(), originalMat.rows(), Bitmap.Config.ARGB_8888);
-                Utils.matToBitmap(originalMat, testBmp);
-                imgView_original.setImageBitmap(testBmp);
+                return performWatershed(grayScaleMat, originalMat);
             }
+        return null;
+        }
+
+        private Mat performWatershed(Mat grayScaleMat, Mat originalMat) {
+            if(isMatEmpty(grayScaleMat)){
+                Log.e(TAG, "Empty grayScaleMat ");
+            }else{
+                Mat binaryMat = new Mat();
+                Imgproc.threshold(grayScaleMat, binaryMat, 0, 255, Imgproc.THRESH_BINARY_INV + Imgproc.THRESH_OTSU);
+                if(isMatEmpty(binaryMat)){
+                    Log.e(TAG, "Empty BinaryMat");
+                }else{
+                    //Real Watershedding:
+                    Mat foregroundMat = new Mat();
+                    Imgproc.erode(binaryMat, foregroundMat, new Mat(),new Point(-1,-1),2);
+                    //Test Foreground Mat:
+                    leafMatPixCount = Core.countNonZero(foregroundMat);
+
+                    Mat backgroundMat = new Mat();
+                    Imgproc.dilate(binaryMat, backgroundMat, new Mat(), new Point(-1,-1), 3);
+                    Imgproc.threshold(backgroundMat, backgroundMat, 1,128, Imgproc.THRESH_BINARY_INV);
+
+                    //Create Marker:
+                    Mat markerMat = new Mat(binaryMat.size(), CvType.CV_8U, new Scalar(0));
+                    Imgproc.connectedComponents(binaryMat, markerMat);
+                    Core.add(foregroundMat, backgroundMat, markerMat);
+
+                    //Segment Process:
+                    Mat marker = new Mat();
+                    //Set Marker:
+                    markerMat.convertTo(marker, CvType.CV_32S);
+                    //Process Marker:
+                    Imgproc.watershed(originalMat, marker);
+                    Mat result = marker;
+                    result.convertTo(result, CvType.CV_8U);
+                    return result;
+                }
+            }
+        return null;
         }
     };
-
-
-
-    private void setOpenCamBtn_onClick() {
-        btn_openCam.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                //open Cam intent:
-                openCamIntent();
-            }
-        });
-    }
 
     //CAMERA ON ACTIVITY RESULT:
     @Override
@@ -128,6 +167,16 @@ public class MainActivity extends AppCompatActivity {
 /*
     HELPER METHODS:
 */
+    private void setOpenCamBtn_onClick() {
+    btn_openCam.setOnClickListener(new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            //open Cam intent:
+            openCamIntent();
+        }
+    });
+}
+
     private void openCamIntent() {
         Intent photoCamIntent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
         //Ensure that there's a camera activity to handle the intent
@@ -170,7 +219,8 @@ STATIC CALLS FOR LIBRARIES AND STUFF
     }
 
     //Debug:
-    public static final String phoneDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString();
+    //public static final String phoneDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString();
+    public static final String debugFilePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString() + "/sheathblight1.jpg";
     private static final int REQUEST_IMAGE_CAPTURE = 1;
     private static final String TAG = "MainActivity";
 }
