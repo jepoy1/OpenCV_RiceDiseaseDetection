@@ -4,6 +4,7 @@ import android.content.ContentResolver;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -20,8 +21,13 @@ import android.widget.Toast;
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
+import org.opencv.imgcodecs.Imgcodecs;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -35,8 +41,8 @@ public class MainActivity extends AppCompatActivity {
     TextView txt_botYpercent;
     TextView txt_botBpercent;
     ImageView imgView_original;
+    String fileName = null;
     String mCurrentPhotoPath = null;
-    private Uri imageUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +77,9 @@ public class MainActivity extends AppCompatActivity {
                 case LoaderCallbackInterface.SUCCESS:
                 {
                     Log.i(TAG, "Here at BaseLoader Call back");
+                    //perform calculations here.
+                    //Mat leafMat =
+                            rtnLeafMat(mCurrentPhotoPath);
                 } break;
                 default:
                 {
@@ -78,7 +87,22 @@ public class MainActivity extends AppCompatActivity {
                 } break;
             }
         }
+        //Debug: To return Mat object
+        private void rtnLeafMat(String mCurrentPhotoPath) {
+            Mat originalMat = Imgcodecs.imread(mCurrentPhotoPath);
+            Log.i(TAG, "Current Photo Path:" + mCurrentPhotoPath);
+            if(isMatEmpty(originalMat)){
+                Log.e(TAG, "Empty originalMat");
+            }else{
+                //Log.i(TAG, "Original Mat:" + originalMat.total());
+                Bitmap testBmp = Bitmap.createBitmap(originalMat.cols(), originalMat.rows(), Bitmap.Config.ARGB_8888);
+                Utils.matToBitmap(originalMat, testBmp);
+                imgView_original.setImageBitmap(testBmp);
+            }
+        }
     };
+
+
 
     private void setOpenCamBtn_onClick() {
         btn_openCam.setOnClickListener(new View.OnClickListener() {
@@ -95,7 +119,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if(requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK){
-            //The putExtra method takes the extra data(Image) that is, meaning data here is null already.
         }else{
             Log.i(TAG, "Cam Image catprue failed.");
             mCurrentPhotoPath = null;
@@ -107,17 +130,16 @@ public class MainActivity extends AppCompatActivity {
 */
     private void openCamIntent() {
         Intent photoCamIntent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
-        // Ensure that there's a camera activity to handle the intent
+        //Ensure that there's a camera activity to handle the intent
         File phoneDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-        String fileName = getFileName();
+        fileName = getFileName();
 
         File imgFile = new File(phoneDirectory, fileName);
         Uri imgUri = Uri.fromFile(imgFile);
-
         photoCamIntent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, imgUri);
         startActivityForResult(photoCamIntent, REQUEST_IMAGE_CAPTURE);
 
-        mCurrentPhotoPath = String.valueOf(imgUri);
+        mCurrentPhotoPath = phoneDirectory.toString() + "/" + fileName;
     }
 
     private String getFileName(){
@@ -134,6 +156,10 @@ public class MainActivity extends AppCompatActivity {
         txt_botYpercent = (TextView) findViewById(R.id.txt_botYpercent);
         txt_botBpercent = (TextView) findViewById(R.id.txt_botBpercent);
         btn_openCam = (Button) findViewById(R.id.btn_openCam);
+    }
+
+    private boolean isMatEmpty(Mat thisMat) {
+        return thisMat.empty();
     }
 /*
 STATIC CALLS FOR LIBRARIES AND STUFF
