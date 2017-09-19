@@ -1,8 +1,13 @@
 package cnrc.ricediseasedetection;
 
+import android.content.ContentResolver;
 import android.content.Intent;
+import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Environment;
+import android.provider.MediaStore;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -14,6 +19,11 @@ import android.widget.Toast;
 
 import org.opencv.android.OpenCVLoader;
 
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class MainActivity extends AppCompatActivity {
     Button btn_openCam;
     TextView txt_topYpercent;
@@ -23,13 +33,15 @@ public class MainActivity extends AppCompatActivity {
     TextView txt_botYpercent;
     TextView txt_botBpercent;
     ImageView imgView_original;
-    String imageFilePath;
+    String mCurrentPhotoPath = null;
+    private Uri imageUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         bindLayouts();
+        setOpenCamBtn_onClick();
     }
 
     //User-Interaction Activities:
@@ -39,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         Log.i(TAG, "On Rsume");
-        setOpenCamBtn_onClick();
+        Log.i(TAG, "Photo current Path: " + mCurrentPhotoPath);
     }
 
     private void setOpenCamBtn_onClick() {
@@ -51,17 +63,13 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
     //CAMERA ON ACTIVITY RESULT:
-
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if(requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK){
-            //Test by setting the data into the bitmap:
-            Bundle extras = data.getExtras();
-            Bitmap imageBitmap = (Bitmap) extras.get("data");
-            imgView_original.setImageBitmap(imageBitmap);
+            //wait:
         }else{
             Log.i(TAG, "Cam Image catprue failed.");
         }
@@ -70,10 +78,25 @@ public class MainActivity extends AppCompatActivity {
 
     /*
             HELPER METHODS:
-        */
+    */
     private void openCamIntent() {
         Intent photoCamIntent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+        // Ensure that there's a camera activity to handle the intent
+        File phoneDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+        String fileName = getFileName();
+
+        File imgFile = new File(phoneDirectory, fileName);
+        Uri imgUri = Uri.fromFile(imgFile);
+
+        photoCamIntent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, imgUri);
         startActivityForResult(photoCamIntent, REQUEST_IMAGE_CAPTURE);
+
+        mCurrentPhotoPath = String.valueOf(imgUri);
+    }
+
+    private String getFileName(){
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        return "RicePhoto_" + timeStamp + ".jpg";
     }
 
     private void bindLayouts(){
@@ -95,7 +118,7 @@ STATIC CALLS FOR LIBRARIES AND STUFF
     }
 
     //Debug:
-    private static final String phonePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString();
+    public static final String phoneDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString();
     private static final int REQUEST_IMAGE_CAPTURE = 1;
     private static final String TAG = "MainActivity";
     static{
