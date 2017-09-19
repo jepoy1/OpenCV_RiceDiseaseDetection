@@ -17,6 +17,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 
 import java.io.File;
@@ -45,14 +47,38 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //User-Interaction Activities:
-
-
     @Override
     protected void onResume() {
         super.onResume();
-        Log.i(TAG, "On Rsume");
+        Log.i(TAG, "On Resume");
         Log.i(TAG, "Photo current Path: " + mCurrentPhotoPath);
+        if(mCurrentPhotoPath == null){
+            //doo nothing.
+        }else{
+            Log.i(TAG, "mCurrentPath is : " + mCurrentPhotoPath + " Proceed to calling openCV callback.");
+                if(!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_6, this, mLoaderCallback))
+                {
+                    Log.e(TAG, "Cannot connect to OpenCV Manager");
+                }
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_2_0, this, mLoaderCallback);
+        }
     }
+
+    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
+        @Override
+        public void onManagerConnected(int status) {
+            switch (status) {
+                case LoaderCallbackInterface.SUCCESS:
+                {
+                    Log.i(TAG, "Here at BaseLoader Call back");
+                } break;
+                default:
+                {
+                    super.onManagerConnected(status);
+                } break;
+            }
+        }
+    };
 
     private void setOpenCamBtn_onClick() {
         btn_openCam.setOnClickListener(new View.OnClickListener() {
@@ -69,16 +95,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if(requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK){
-            //wait:
+            //The putExtra method takes the extra data(Image) that is, meaning data here is null already.
         }else{
             Log.i(TAG, "Cam Image catprue failed.");
+            mCurrentPhotoPath = null;
         }
-
     }
 
-    /*
-            HELPER METHODS:
-    */
+/*
+    HELPER METHODS:
+*/
     private void openCamIntent() {
         Intent photoCamIntent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
         // Ensure that there's a camera activity to handle the intent
@@ -121,12 +147,4 @@ STATIC CALLS FOR LIBRARIES AND STUFF
     public static final String phoneDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString();
     private static final int REQUEST_IMAGE_CAPTURE = 1;
     private static final String TAG = "MainActivity";
-    static{
-        if(!OpenCVLoader.initDebug()){
-            Log.e(TAG, "Init Debug Failed to load");
-        }else{
-            Log.i(TAG, "OpenCV on Debug mode.");
-        }
-    }
-
 }
