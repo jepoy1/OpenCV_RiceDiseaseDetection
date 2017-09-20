@@ -26,6 +26,7 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
+import org.opencv.core.Range;
 import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
@@ -48,7 +49,13 @@ public class MainActivity extends AppCompatActivity {
     ImageView imgView_original;
     String fileName = null;
     String mCurrentPhotoPath = null;
+    private Mat originalMat;
     private int leafMatPixCount;
+    private long topLeaf_yPixCount, topLeaf_bPixCount;
+    private long midLeaf_yPixCount, midLeaf_bPixCount;
+    private long botLeaf_yPixCount, botLeaf_bPixCount;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,7 +96,8 @@ public class MainActivity extends AppCompatActivity {
                     //test:
                     if(leafMat != null){
                         //Perform operations on this fucking leafMat:
-
+                        //Count top:
+                        performTopLeafActivities(leafMat);
                     }else{
                         Log.e(TAG,"Leaf mat is Null (empty).");
                     }
@@ -100,9 +108,100 @@ public class MainActivity extends AppCompatActivity {
                 } break;
             }
         }
+
+        private void performTopLeafActivities(Mat leafMat) {
+            //Cut the leaf into three parts: here is top:
+            Mat topLeaf = cropTopLeaf(leafMat);
+            Mat midLeaf = cropMidLeaf(leafMat);
+            Mat botLeaf = cropBotLeaf(leafMat);
+            //get pixel color counts; set it to xml widgets.
+            topLeaf_yPixCount = countYellowPixel(topLeaf);
+            topLeaf_bPixCount = countBrownPixel(topLeaf);
+            midLeaf_yPixCount = countYellowPixel(midLeaf);
+            midLeaf_bPixCount = countBrownPixel(midLeaf);
+            botLeaf_yPixCount = countYellowPixel(botLeaf);
+            botLeaf_bPixCount = countBrownPixel(botLeaf);
+
+            //test:
+            Log.i(TAG, "TopLeaf_yPixCount: " + topLeaf_yPixCount);
+            Log.i(TAG, "TopLeaf_bPixCount: " + topLeaf_bPixCount);
+            Log.i(TAG, "Middle Yellow Pixel COunt: " + midLeaf_yPixCount);
+            Log.i(TAG, "Middle Brown Pixel COunt: " + midLeaf_bPixCount);
+            Log.i(TAG, "Bot Yellow Pixel Count: " + botLeaf_yPixCount);
+            Log.i(TAG, "Bot Brown Pixel Count: " + botLeaf_bPixCount);
+        }
+
+        private Mat cropBotLeaf(Mat leafMat) {
+            Mat leafMatCopy = leafMat.clone();
+            Mat bottomMask = new Mat (leafMatCopy, new Range( (leafMatCopy.rows() /2)+(leafMatCopy.rows()/4) -1, leafMatCopy.rows()-1), new Range( 0, leafMatCopy.cols()-1) );
+            Mat bottomLeafMat = new Mat(originalMat, new Range(((originalMat.rows() /2)+(leafMatCopy.rows()/4)-1), originalMat.rows()-1), new Range( 0, originalMat.cols()-1));
+            bottomLeafMat.copyTo(bottomLeafMat, bottomMask);
+        return bottomLeafMat;
+        }
+
+        private Mat cropMidLeaf(Mat leafMat) {
+            Mat leafMatCopy = new Mat();
+            leafMatCopy = leafMat.clone();
+
+            Mat middleMask = new Mat(leafMatCopy, new Range( ( (leafMatCopy.rows() / 2) - (leafMatCopy.rows() / 4) ) - 1 , ( (leafMatCopy.rows() / 2)+ leafMatCopy.rows() /4 )-1), new Range(0 , (leafMatCopy.cols()-1)) );
+            Mat middleLeafMat = new Mat(originalMat, new Range( ((originalMat.rows()/2)-(originalMat.rows()/4)-1),(((originalMat.rows()/2)+originalMat.rows()/4)-1) ), new Range(0,(leafMatCopy.cols()-1) ) );
+            middleLeafMat.copyTo(middleLeafMat, middleMask);
+        return middleLeafMat;
+        }
+
+        private Mat cropTopLeaf(Mat leafMat) {
+            //Create a copy of leafMat:
+            Mat leafMatCopy = leafMat.clone();
+            Mat topLeafMask = new Mat(leafMatCopy, new Range(0 , ((leafMatCopy.rows()/2)-(leafMatCopy.rows()/4)) -1 ) , new Range( 0 , (leafMatCopy.cols()-1) ) );
+            //create an originalImagew ith the same size as the bottom and top masks:
+            Mat topLeafMat = new Mat( originalMat, new Range(0 , ((originalMat.rows()/2) - (originalMat.rows()/4) -1)), new Range( 0,(originalMat.cols()-1) ) );
+            topLeafMat.copyTo(topLeafMat, topLeafMask);
+            return topLeafMat;
+        }
+
+        private long countBrownPixel(Mat thisMat) {
+            Mat thisMatCopy = thisMat.clone();
+
+            if(!isMatEmpty(thisMatCopy)){
+                Mat thisMatHsv = thisMatCopy;
+                Imgproc.cvtColor(thisMatCopy ,thisMatHsv , Imgproc.COLOR_BGR2HSV);
+
+                Mat brownMat = new Mat();
+                Core.inRange(thisMatHsv, new Scalar(8,100,20), new Scalar(17,255,200), brownMat);
+                if(!isMatEmpty(brownMat)){
+                    return Core.countNonZero(brownMat);
+                }else{
+                    Log.i(TAG, "BrownMat Empty");
+                }
+            }else{
+                Log.e(TAG, "Empty thisMatCopy");
+            }
+            return 0;
+        }
+
+        private long countYellowPixel(Mat thisMat) {
+            Mat thisMatCopy = thisMat.clone();
+
+            if(!isMatEmpty(thisMatCopy)){
+                Mat thisMatHsv = thisMatCopy;
+                Imgproc.cvtColor(thisMatCopy ,thisMatHsv , Imgproc.COLOR_BGR2HSV);
+                Mat yellowMat = new Mat();
+                Core.inRange(thisMatCopy, new Scalar(18,100,100), new Scalar(30,255,255), yellowMat);
+                if(!isMatEmpty(yellowMat)){
+                    return Core.countNonZero(yellowMat);
+                }else{
+                    Log.i(TAG, "YellowMat Empty");
+                }
+            }else{
+                Log.e(TAG, "Empty thisMatCopy");
+            }
+        return 0;
+        }
+
+
         //Debug: To return Mat object
         private Mat rtnLeafMat(String thisFilePath) {
-            Mat originalMat = Imgcodecs.imread(thisFilePath);
+            originalMat = Imgcodecs.imread(thisFilePath);
             Mat grayScaleMat = Imgcodecs.imread(thisFilePath, Imgcodecs.IMREAD_GRAYSCALE);
             Log.i(TAG, "Current Photo Path:" + thisFilePath);
             if(isMatEmpty(grayScaleMat)){
