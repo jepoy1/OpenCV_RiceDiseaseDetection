@@ -97,7 +97,10 @@ public class MainActivity extends AppCompatActivity {
                     if(leafMat != null){
                         //Perform operations on this fucking leafMat:
                         //Count top:
+                        Log.i(TAG, "Total Leaf Mat Pixel Count: " + leafMatPixCount);
                         performTopLeafActivities(leafMat);
+                        performMidLeafActivities(leafMat);
+                        performBotLeafActivities(leafMat);
                     }else{
                         Log.e(TAG,"Leaf mat is Null (empty).");
                     }
@@ -109,26 +112,33 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        private void performBotLeafActivities(Mat leafMat) {
+            Mat botLeaf = cropBotLeaf(leafMat);
+            botLeaf_yPixCount = countYellowPixel(botLeaf);
+            botLeaf_bPixCount = countBrownPixel(botLeaf);
+            //test:
+            Log.i(TAG, "Bot Yellow Pixel Count: " + botLeaf_yPixCount);
+            Log.i(TAG, "Bot Brown Pixel Count: " + botLeaf_bPixCount);
+        }
+
+        private void performMidLeafActivities(Mat leafMat) {
+            Mat midLeaf = cropMidLeaf(leafMat);
+            midLeaf_yPixCount = countYellowPixel(midLeaf);
+            midLeaf_bPixCount = countBrownPixel(midLeaf);
+            //test:
+            Log.i(TAG, "Middle Yellow Pixel COunt: " + midLeaf_yPixCount);
+            Log.i(TAG, "Middle Brown Pixel COunt: " + midLeaf_bPixCount);
+        }
+
         private void performTopLeafActivities(Mat leafMat) {
             //Cut the leaf into three parts: here is top:
             Mat topLeaf = cropTopLeaf(leafMat);
-            Mat midLeaf = cropMidLeaf(leafMat);
-            Mat botLeaf = cropBotLeaf(leafMat);
             //get pixel color counts; set it to xml widgets.
             topLeaf_yPixCount = countYellowPixel(topLeaf);
             topLeaf_bPixCount = countBrownPixel(topLeaf);
-            midLeaf_yPixCount = countYellowPixel(midLeaf);
-            midLeaf_bPixCount = countBrownPixel(midLeaf);
-            botLeaf_yPixCount = countYellowPixel(botLeaf);
-            botLeaf_bPixCount = countBrownPixel(botLeaf);
-
             //test:
             Log.i(TAG, "TopLeaf_yPixCount: " + topLeaf_yPixCount);
             Log.i(TAG, "TopLeaf_bPixCount: " + topLeaf_bPixCount);
-            Log.i(TAG, "Middle Yellow Pixel COunt: " + midLeaf_yPixCount);
-            Log.i(TAG, "Middle Brown Pixel COunt: " + midLeaf_bPixCount);
-            Log.i(TAG, "Bot Yellow Pixel Count: " + botLeaf_yPixCount);
-            Log.i(TAG, "Bot Brown Pixel Count: " + botLeaf_bPixCount);
         }
 
         private Mat cropBotLeaf(Mat leafMat) {
