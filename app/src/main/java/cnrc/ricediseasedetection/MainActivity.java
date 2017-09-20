@@ -54,6 +54,10 @@ public class MainActivity extends AppCompatActivity {
     private long topLeaf_yPixCount, topLeaf_bPixCount;
     private long midLeaf_yPixCount, midLeaf_bPixCount;
     private long botLeaf_yPixCount, botLeaf_bPixCount;
+    private int topLeaf_yPercent, topLeaf_bPercent;
+    private int midLeaf_yPercent, midLeaf_bPercent;
+    private int botLeaf_yPercent, botLeaf_bPercent;
+    private boolean isTungro = false, isLeafBlight = false, isSheathBlight = false, isLeafStreak = false;
 
 
 
@@ -90,6 +94,8 @@ public class MainActivity extends AppCompatActivity {
             switch (status) {
                 case LoaderCallbackInterface.SUCCESS:
                 {
+                    //Set content View here TEST:
+
                     Log.i(TAG, "Here at BaseLoader Call back");
                     //perform calculations here.
                     Mat leafMat = rtnLeafMat(debugFilePath);
@@ -101,6 +107,7 @@ public class MainActivity extends AppCompatActivity {
                         performTopLeafActivities(leafMat);
                         performMidLeafActivities(leafMat);
                         performBotLeafActivities(leafMat);
+                        setDiseasePosibilities();
                     }else{
                         Log.e(TAG,"Leaf mat is Null (empty).");
                     }
@@ -112,23 +119,22 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        private void performBotLeafActivities(Mat leafMat) {
-            Mat botLeaf = cropBotLeaf(leafMat);
-            botLeaf_yPixCount = countYellowPixel(botLeaf);
-            botLeaf_bPixCount = countBrownPixel(botLeaf);
-            //test:
-            Log.i(TAG, "Bot Yellow Pixel Count: " + botLeaf_yPixCount);
-            Log.i(TAG, "Bot Brown Pixel Count: " + botLeaf_bPixCount);
+        private void setDiseasePosibilities() {
+            //set value of tungro and leafBlight:
+            isTungro = topLeaf_yPercent > 10;
+            isLeafBlight = topLeaf_bPercent > 10;
+
+            isSheathBlight = midLeaf_yPercent > 10;
+            isLeafStreak = ((topLeaf_yPercent > 10) && (midLeaf_yPercent > 10) && (botLeaf_yPercent > 10));
+            //Rice blast: Not yet:
+            //Log this shit:
+            Log.i(TAG, "Is Tungro: " + isTungro);
+            Log.i(TAG, "Is LB: " + isLeafBlight);
+            Log.i(TAG, "Is SB: " + isSheathBlight);
+            Log.i(TAG, "Is LS: " + isLeafBlight);
+
         }
 
-        private void performMidLeafActivities(Mat leafMat) {
-            Mat midLeaf = cropMidLeaf(leafMat);
-            midLeaf_yPixCount = countYellowPixel(midLeaf);
-            midLeaf_bPixCount = countBrownPixel(midLeaf);
-            //test:
-            Log.i(TAG, "Middle Yellow Pixel COunt: " + midLeaf_yPixCount);
-            Log.i(TAG, "Middle Brown Pixel COunt: " + midLeaf_bPixCount);
-        }
 
         private void performTopLeafActivities(Mat leafMat) {
             //Cut the leaf into three parts: here is top:
@@ -136,9 +142,41 @@ public class MainActivity extends AppCompatActivity {
             //get pixel color counts; set it to xml widgets.
             topLeaf_yPixCount = countYellowPixel(topLeaf);
             topLeaf_bPixCount = countBrownPixel(topLeaf);
+            //setPixelPercentage:
+            topLeaf_yPercent = setPixelPercent(topLeaf_yPixCount);
+            topLeaf_bPercent = setPixelPercent(topLeaf_bPixCount);
+
+
+        }
+
+        private void performMidLeafActivities(Mat leafMat) {
+            Mat midLeaf = cropMidLeaf(leafMat);
+            midLeaf_yPixCount = countYellowPixel(midLeaf);
+            midLeaf_bPixCount = countBrownPixel(midLeaf);
+
+            midLeaf_yPercent = setPixelPercent(midLeaf_yPixCount);
+            midLeaf_bPercent = setPixelPercent(midLeaf_bPixCount);
+
             //test:
-            Log.i(TAG, "TopLeaf_yPixCount: " + topLeaf_yPixCount);
-            Log.i(TAG, "TopLeaf_bPixCount: " + topLeaf_bPixCount);
+            Log.i(TAG, "MidLeaf Yellow Percent: " + midLeaf_yPercent);
+            Log.i(TAG, "MidLeaf Brown Percent: " + midLeaf_bPercent);
+
+
+
+
+        }
+
+        private void performBotLeafActivities(Mat leafMat) {
+            Mat botLeaf = cropBotLeaf(leafMat);
+            botLeaf_yPixCount = countYellowPixel(botLeaf);
+            botLeaf_bPixCount = countBrownPixel(botLeaf);
+
+            botLeaf_yPercent = setPixelPercent(botLeaf_yPixCount);
+            botLeaf_bPercent = setPixelPercent(botLeaf_bPixCount);
+        }
+
+        private int setPixelPercent(long thisPixelCount) {
+        return (int) (((thisPixelCount * 100) / (leafMatPixCount / 3)) / 3);
         }
 
         private Mat cropBotLeaf(Mat leafMat) {
